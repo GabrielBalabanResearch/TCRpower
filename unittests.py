@@ -27,10 +27,7 @@ def get_testdata(intercept = True,
 						 random_state = RANDSTATE)
 	return C, fmix
 
-def get_default_testparams():
-	Nread = 1000
-	pread = 0.7
-	alpha = 0.05
+def get_default_testparams(Nread = 10000, pread = 0.7, alpha = 0.05):
 	return Nread, pread, alpha
 
 def test_parameterization_consistent():
@@ -67,6 +64,8 @@ def test_ModelCalibrator_llh():
 	print("LLH test passed")
 
 def test_ModelCalibrator_fdtest_paramderiv(show_results = False):
+	#Tests that the score function matches a numerical derivative
+
 	Nread, pread, alpha = get_default_testparams()
 	C, fmix = get_testdata(Nread = Nread, 
 						   pread = pread,
@@ -85,7 +84,8 @@ def test_ModelCalibrator_fdtest_paramderiv(show_results = False):
 		grad_result.report()
 	
 	assert grad_result.matches(relTOL = 1.0e-7)
-	
+	print("Finite difference test of score function passed.")
+
 #################################################
 #Finite difference tester for the score function
 #################################################
@@ -119,19 +119,19 @@ class FDTestResult(object):
 #################################################
 
 def test_ModelCalibrator_fit(show_results = False):
-	Nread, pread, alpha = get_default_testparams()
+	Nread, pread, alpha = get_default_testparams(Nread = 1000000)
 	C, fmix = get_testdata(alpha = alpha,
 						   Nread = Nread,
-						   pread = pread)
-
+						   pread = pread,
+						   TCR_perlog = 50)
 
 	modelcalib = ModelCalibrator(fmix, C, Nread)
 	
+	fitresult = modelcalib.fit(show_convergence = show_results)
 	from IPython import embed; embed()
-
 
 if __name__ == "__main__":
 	test_parameterization_consistent()
 	test_ModelCalibrator_llh()
-	test_ModelCalibrator_fdtest_paramderiv(show_results = True)
+	test_ModelCalibrator_fdtest_paramderiv(show_results = False)
 	test_ModelCalibrator_fit(show_results = True)

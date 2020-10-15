@@ -1,6 +1,10 @@
 import numpy as np 
 import pandas as pd
+import statsmodels.api as sm
+import numdifftools as nd
+import warnings
 from scipy.special import gamma, gammaln, digamma, polygamma
+from newtonfitter import NewtonFitter
 
 class ModelCalibrator(object):
 	"""
@@ -19,8 +23,6 @@ class ModelCalibrator(object):
 		P_read : The proportion of reads which map
 				 to the target known clonotypes.
 
-		
-
 	Negative Binomial Parameterization is the NB2 model with mean mu 
 	and variance
 	
@@ -37,9 +39,41 @@ class ModelCalibrator(object):
 		self.C = C
 		self.Nread = Nread
 
-	def fit(self):
-		pass
-		#Do negbin calculations
+	def fit(self, start_params = None,
+				  stepsize = 1.0,
+				  maxiter = 1000,
+				  TOL = 1.0e-10,
+				  show_convergence = False):
+
+		if start_params is None:
+			start_params = self.get_default_initparams()
+
+		scorep = lambda p: self.score(p[0], p[1])
+		llh_hess = nd.Jacobian(scorep, 1.0e-8)
+
+		fitter = NewtonFitter(lambda p: self.llh(p[0], p[1]),
+							  scorep,
+							  llh_hess)
+		
+		fittingresult = fitter.fit(start_params = start_params,
+								   stepsize = stepsize,
+								   TOL = TOL,
+								   maxiter = maxiter,
+								   show_convergence = show_convergence)
+		
+		return fittingresult
+		#from IPython import embed; embed()
+		
+
+	def get_default_initparams(self):
+		#Get the initial spread from a Poisson model
+		alpha0 = 0.001
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+			poisson_fam = sm.families.Poisson(link = sm.genmod.families.links.identity())
+			fread0 = sm.GLM(self.C, self.fmix*self.Nread, poisson_fam).fit().params
+		return np.hstack([fread0, alpha0])
 
 	def llh(self, pread, alpha):
 		mu = self.fmix*pread*self.Nread
@@ -49,7 +83,7 @@ class ModelCalibrator(object):
 		llh += self.C*np.log(alpha*mu) - (self.C + alphainv)*np.log(1 + alpha*mu)
 		return np.sum(llh)
 
-	#First derivative Functions
+	#First derivative functions
 	def score(self, pread, alpha):
 		mu = self.fmix*pread*self.Nread
 		
