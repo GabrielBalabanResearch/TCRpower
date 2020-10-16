@@ -4,7 +4,7 @@ import statsmodels.api as sm
 import numdifftools as nd
 import warnings
 from scipy.special import gamma, gammaln, digamma, polygamma
-from newtonfitter import NewtonFitter
+from tcrpower.newtonfitter import NewtonFitter
 
 class PCCalibrator(object):
 	"""

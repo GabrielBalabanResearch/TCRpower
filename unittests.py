@@ -1,5 +1,5 @@
 import numpy as np
-from calibrate import *
+from tcrpower.calibrate import *
 from scipy import stats
 import numdifftools as nd
 
@@ -130,9 +130,10 @@ def test_PCCalibrator_fit(show_results = False):
 	pc_model = modelcalib.fit(show_convergence = show_results)
 	assert np.abs(pc_model.pread - pread) < 0.2 
 	assert np.abs(pc_model.alpha - alpha) < 0.002
+	print("Parameter fitting test passed.")
 
 if __name__ == "__main__":
 	test_parameterization_consistent()
 	test_PCCalibrator_llh()
 	test_PCCalibrator_fdtest_paramderiv(show_results = False)
-	test_PCCalibrator_fit(show_results = True)
+	test_PCCalibrator_fit(show_results = False)
