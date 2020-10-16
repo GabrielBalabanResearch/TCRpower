@@ -45,7 +45,7 @@ def test_parameterization_consistent():
 	assert np.linalg.norm(mu - mu2) < 1.0e-12
 	print("Parameterization internal consistency test passed")
 
-def test_ModelCalibrator_llh():
+def test_PCCalibrator_llh():
 	Nread, pread, alpha = get_default_testparams()
 
 	C, fmix = get_testdata(Nread = Nread, 
@@ -54,7 +54,7 @@ def test_ModelCalibrator_llh():
 
 	mu = Nread*pread*fmix
 
-	nb2_calibrator = ModelCalibrator(fmix, C, Nread)
+	nb2_calibrator = PCCalibrator(fmix, C, Nread)
 
 	r,p = rp_negbin_params(alpha, mu)
 	logp_scipy = np.log(stats.nbinom.pmf(C, r, p)).sum()
@@ -63,7 +63,7 @@ def test_ModelCalibrator_llh():
 	assert np.abs(logp_model - logp_scipy) < 0.1
 	print("LLH test passed")
 
-def test_ModelCalibrator_fdtest_paramderiv(show_results = False):
+def test_PCCalibrator_fdtest_paramderiv(show_results = False):
 	#Tests that the score function matches a numerical derivative
 
 	Nread, pread, alpha = get_default_testparams()
@@ -71,7 +71,7 @@ def test_ModelCalibrator_fdtest_paramderiv(show_results = False):
 						   pread = pread,
 						   alpha = alpha)
 
-	nb2_calibrator = ModelCalibrator(fmix, C, Nread)
+	nb2_calibrator = PCCalibrator(fmix, C, Nread)
 	x_true = np.array([pread, alpha])
 
 	x0 = x_true*0.5
@@ -118,20 +118,21 @@ class FDTestResult(object):
 		return np.linalg.norm(self.df_fd - self.df_ana)/np.linalg.norm(self.df_ana) < relTOL
 #################################################
 
-def test_ModelCalibrator_fit(show_results = False):
+def test_PCCalibrator_fit(show_results = False):
 	Nread, pread, alpha = get_default_testparams(Nread = 1000000)
 	C, fmix = get_testdata(alpha = alpha,
 						   Nread = Nread,
 						   pread = pread,
 						   TCR_perlog = 50)
 
-	modelcalib = ModelCalibrator(fmix, C, Nread)
+	modelcalib = PCCalibrator(fmix, C, Nread)
 	
-	fitresult = modelcalib.fit(show_convergence = show_results)
-	from IPython import embed; embed()
+	pc_model = modelcalib.fit(show_convergence = show_results)
+	assert np.abs(pc_model.pread - pread) < 0.2 
+	assert np.abs(pc_model.alpha - alpha) < 0.002
 
 if __name__ == "__main__":
 	test_parameterization_consistent()
-	test_ModelCalibrator_llh()
-	test_ModelCalibrator_fdtest_paramderiv(show_results = False)
-	test_ModelCalibrator_fit(show_results = True)
+	test_PCCalibrator_llh()
+	test_PCCalibrator_fdtest_paramderiv(show_results = False)
+	test_PCCalibrator_fit(show_results = True)

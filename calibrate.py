@@ -6,8 +6,10 @@ import warnings
 from scipy.special import gamma, gammaln, digamma, polygamma
 from newtonfitter import NewtonFitter
 
-class ModelCalibrator(object):
+class PCCalibrator(object):
 	"""
+	Power Calculator Calibrator
+	
 	Performs calibration calculations for a detection power calculator
 	using pilot/test data with known clonotype mixture frequencies 
 	
@@ -42,7 +44,7 @@ class ModelCalibrator(object):
 	def fit(self, start_params = None,
 				  stepsize = 1.0,
 				  maxiter = 1000,
-				  TOL = 1.0e-10,
+				  TOL = 1.0e-8,
 				  show_convergence = False):
 
 		if start_params is None:
@@ -61,9 +63,8 @@ class ModelCalibrator(object):
 								   maxiter = maxiter,
 								   show_convergence = show_convergence)
 		
-		return fittingresult
-		#from IPython import embed; embed()
-		
+		return PCModel(fittingresult.params[0], 
+					   fittingresult.params[1])
 
 	def get_default_initparams(self):
 		#Get the initial spread from a Poisson model
@@ -107,6 +108,12 @@ class ModelCalibrator(object):
 
 	def dllh_dmu(self, alpha, mu):
 		return self.C/mu - (1 + self.C*alpha)/(1 + mu*alpha)
+
+class PCModel:
+	"Power Calculator Model"
+	def __init__(self, pread, alpha):
+		self.pread = pread
+		self.alpha = alpha
 
 #Helper functions to switch between negbin parameterizations (NB2 model)
 def rp_negbin_params(alpha, mu):
