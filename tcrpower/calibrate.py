@@ -36,10 +36,10 @@ class PCCalibrator(object):
 		f(Y, alpha, mu) = \frac{\gamma(Y + alpha^-1)}{\gamma(Y + 1) \gamma(alpha^-1)} (\frac{\alpha \mu}{1 + \alpha \mu})^Y (1 + \alpha \mu)^-r
 	"""
 	
-	def __init__(self, fmix, C, Nread):
-		self.fmix = fmix
-		self.C = C
-		self.Nread = Nread
+	def __init__(self, tcr_frequencies, counts, num_reads):
+		self.fmix = tcr_frequencies
+		self.C = counts
+		self.Nread = num_reads
 
 	def fit(self, start_params = None,
 				  stepsize = 1.0,

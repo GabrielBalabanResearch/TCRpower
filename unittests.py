@@ -84,7 +84,7 @@ def test_PCCalibrator_fdtest_paramderiv(show_results = False):
 		grad_result.report()
 	
 	assert grad_result.matches(relTOL = 1.0e-7)
-	print("Finite difference test of score function passed.")
+	print("Finite difference test of score function passed")
 
 #################################################
 #Finite difference tester for the score function
@@ -130,7 +130,7 @@ def test_PCCalibrator_fit(show_results = False):
 	pc_model = modelcalib.fit(show_convergence = show_results)
 	assert np.abs(pc_model.pread - pread) < 0.2 
 	assert np.abs(pc_model.alpha - alpha) < 0.002
-	print("Parameter fitting test passed.")
+	print("Parameter fitting test passed")
 
 if __name__ == "__main__":
 	test_parameterization_consistent()
