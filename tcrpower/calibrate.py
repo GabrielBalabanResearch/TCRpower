@@ -9,7 +9,7 @@ from newtonfitter import NewtonFitter
 class PCCalibrator(object):
 	"""
 	Power Calculator Calibrator
-	
+
 	Performs calibration calculations for a detection power calculator
 	using pilot/test data with known clonotype mixture frequencies 
 	
@@ -88,7 +88,7 @@ class PCCalibrator(object):
 	def score(self, pread, alpha):
 		mu = self.fmix*pread*self.Nread
 		
-		#Alpha derivative
+		#alpha derivative
 		dllh_da = self.score_alpha(alpha, mu)		
 
 		#fread derivative
