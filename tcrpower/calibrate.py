@@ -33,7 +33,7 @@ class PCCalibrator(object):
 	The density function for a single data-point is then
 	.. math::
 		f(Y,r,p) = \frac{\gamma(Y + r)}{\gamma(Y + 1) \gamma(r)} (1 -p)^Y p^r
-		f(Y, alpha, mu) = \frac{\gamma(Y + alpha^-1)}{\gamma(Y + 1) \gamma(alpha^-1)} (\frac{\alpha \mu}{1 + \alpha \mu})^Y (1 + \alpha \mu)^-r
+		f(Y, alpha, mu) = \frac{\gamma(Y + alpha^-1)}{\gamma(Y + 1) \gamma(alpha^-1)} (\frac{\alpha \mu}{1 + \alpha \mu})^Y (1 + \alpha \mu)^(-alpha^-1)
 	"""
 	
 	def __init__(self, tcr_frequencies, counts, num_reads):

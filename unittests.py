@@ -1,5 +1,6 @@
 import numpy as np
 from tcrpower.calibrate import *
+from tcrpower.powercalc import TCRPowerCalculator
 from scipy import stats
 import numdifftools as nd
 
@@ -132,8 +133,57 @@ def test_PCCalibrator_fit(show_results = False):
 	assert np.abs(pc_model.alpha - alpha) < 0.002
 	print("Parameter fitting test passed")
 
+def test_TCRPowerCalculator_limit_of_detection_tcrfreq():
+	Nread, pread, alpha = get_default_testparams(Nread = 1000000)
+	C, fmix = get_testdata(alpha = alpha,
+						   Nread = Nread,
+						   pread = pread,
+						   TCR_perlog = 50)
+
+	conf_level = 0.95
+
+	modelcalib = PCCalibrator(fmix, C, Nread)
+	powercalc = TCRPowerCalculator(modelcalib.fit())
+	
+	#The lowest frequency TCR clone that can be detected with 95% reliability
+
+	f_lod95 = powercalc.get_limit_of_detection_tcrfreq(Nread, conf_level)
+	mu_lod95 = f_lod95*pread*Nread 
+
+	r, p = rp_negbin_params(alpha, mu_lod95)
+
+	p_detect = 1 - stats.nbinom.pmf(0, r, p)
+	assert np.abs(p_detect - conf_level) < 0.004
+	print("TCR frequency limit of detection test passed")
+
+def test_TCRPowerCalculator_limit_of_detection_nreads():
+	Nread, pread, alpha = get_default_testparams(Nread = 1000000)
+	C, fmix = get_testdata(alpha = alpha,
+						   Nread = Nread,
+						   pread = pread,
+						   TCR_perlog = 50)
+
+	conf_level = 0.95
+
+	modelcalib = PCCalibrator(fmix, C, Nread)
+	powercalc = TCRPowerCalculator(modelcalib.fit())
+	
+	test_tcr_freq = np.median(fmix)
+
+	#The lowest frequency TCR clone that can be detected with 95% reliability
+	nread_lod95 = powercalc.get_limit_of_detection_nreads(test_tcr_freq, conf_level)
+	mu_lod95 = test_tcr_freq*pread*nread_lod95 
+
+	r, p = rp_negbin_params(alpha, mu_lod95)
+
+	p_detect = 1 - stats.nbinom.pmf(0, r, p)
+	assert np.abs(p_detect - conf_level) < 0.004
+	print("Num reads limit of detection test passed")
+
 if __name__ == "__main__":
 	test_parameterization_consistent()
 	test_PCCalibrator_llh()
 	test_PCCalibrator_fdtest_paramderiv(show_results = False)
 	test_PCCalibrator_fit(show_results = False)
+	test_TCRPowerCalculator_limit_of_detection_tcrfreq()
+	test_TCRPowerCalculator_limit_of_detection_nreads()
