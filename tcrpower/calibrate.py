@@ -24,6 +24,8 @@ class PCCalibrator(object):
 
 		P_read : The proportion of reads which map
 				 to the target known clonotypes.
+		
+		alpha: Variance scaling parameter
 
 	Negative Binomial Parameterization is the NB2 model with mean mu 
 	and variance

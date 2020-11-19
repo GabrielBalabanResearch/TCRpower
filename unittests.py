@@ -21,7 +21,6 @@ def get_testdata(intercept = True,
 	#Generate Y From a Negbin2 model
 	r, p = rp_negbin_params(alpha, mu)
 	
-	#scipy uses 1 - p = our p
 	C = stats.nbinom.rvs(r,
 						 p,
 						 size = len(fmix),
