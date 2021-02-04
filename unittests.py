@@ -1,5 +1,6 @@
 import numpy as np
 from tcrpower.calibrate import *
+from tcrpower.calibrate2 import PCVarPowerCalibrator
 from tcrpower.powercalc import TCRPowerCalculator
 from scipy import stats
 import numdifftools as nd
@@ -10,6 +11,7 @@ def get_testdata(intercept = True,
 				 logrange = 6,
 				 TCR_perlog = 15,
 				 pread = 0.7,
+				 lmbda = 2,
 				 RANDSTATE = 42):
 
 	logvals = np.repeat(10**np.arange(1,logrange), TCR_perlog)
@@ -19,8 +21,7 @@ def get_testdata(intercept = True,
 	mu = fmix*pread*Nread
 	
 	#Generate Y From a Negbin2 model
-	r, p = rp_negbin_params(alpha, mu)
-	
+	r, p = PCVarPowerCalibrator.negbin_rp(mu, alpha, lmbda)
 	C = stats.nbinom.rvs(r,
 						 p,
 						 size = len(fmix),
@@ -178,6 +179,8 @@ def test_TCRPowerCalculator_limit_of_detection_nreads():
 	p_detect = 1 - stats.nbinom.pmf(0, r, p)
 	assert np.abs(p_detect - conf_level) < 0.004
 	print("Num reads limit of detection test passed")
+
+
 
 if __name__ == "__main__":
 	test_parameterization_consistent()
