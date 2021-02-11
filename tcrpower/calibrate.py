@@ -136,9 +136,8 @@ class NB2TCRCountModel:
 		mu = self.predict_mean(tcr_frequencies, num_reads)
 		return mu + self.alpha*mu**2
 
-	def pmf(self, tcr_frequencies = 1.0, num_reads = 1, count = 0):
+	def pmf(self, mu, count = 0):
 		alpha = self.alpha
-		mu = self.predict_mean(tcr_frequencies, num_reads)
 		r,p = rp_negbin_params(alpha, mu)
 		return stats.nbinom.pmf(count, r, p)
 
@@ -149,7 +148,8 @@ class NB2TCRCountModel:
 		"""
 		
 		#TODO: Implement a detection probability threshold by summing over the first argument of the pmf.
-		return 1.0 - self.pmf(tcr_frequencies = tcr_frequencies, num_reads = num_reads, count =0)
+		mu = self.predict_mean(tcr_frequencies, num_reads)
+		return 1.0 - self.pmf(mu, count =0)
 
 	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
 		alpha = self.alpha

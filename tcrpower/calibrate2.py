@@ -84,9 +84,9 @@ class PCVarPowerCalibrator(object):
 				               bounds = [[0, None], [0, None], [0, None]],
 				               options = {"disp":show_convergence})
 
-			return PCModel(opt_res.x[0], 
-						   opt_res.x[1],
-						   opt_res.x[2])
+			return NBVarTCRCountModel(opt_res.x[0], 
+						   			  opt_res.x[1],
+						   			  opt_res.x[2])
 
 	def get_default_initparams(self, show_convergence):
 		#Get beta parameters from Poisson model
@@ -157,9 +157,44 @@ class PCVarPowerCalibrator(object):
 		p = 1/(1 + amul)
 		return r, p
 
-class PCModel:
-	"Power Calculator Model"
+class NBVarTCRCountModel:
+	"Parameterized Negative Binomial 2 model"
 	def __init__(self, pread, alpha, lmbda):
 		self.pread = pread
 		self.alpha = alpha
 		self.lmbda = lmbda
+
+	def predict_mean(self, tcr_frequencies, num_reads):
+		return tcr_frequencies*self.pread*num_reads
+
+	def predict_variance(self, tcr_frequencies, num_reads):
+		mu = self.predict_mean(tcr_frequencies, num_reads)
+		return mu + self.alpha*mu**2
+
+	def pmf(self, mu, count = 0):
+		alpha = self.alpha
+		r,p = rp_negbin_params(alpha, mu)
+		return stats.nbinom.pmf(count, r, p)
+
+	def predict_detection_probability(self, tcr_frequencies = 1.0, num_reads = 1):
+		"""
+		Models detection probability with negative binomial models assuming RNA receptor frequencies
+		detect_thresh = Minimum number of reads before a TCR is considered "detected".
+		"""
+		
+		#TODO: Implement a detection probability threshold by summing over the first argument of the pmf.
+		mu = self.predict_mean(tcr_frequencies, num_reads)
+		return 1.0 - self.pmf(mu, count = 0)
+
+	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
+		alpha = self.alpha
+		mu = self.predict_mean(tcr_frequencies, num_reads)
+		r,p = rp_negbin_params(alpha, mu)
+		return stats.nbinom.interval(interval_size, r, p)
+
+#class PCModel:
+#	"Power Calculator Model"
+#	def __init__(self, pread, alpha, lmbda):
+#		self.pread = pread
+#		self.alpha = alpha
+#		self.lmbda = lmbda

@@ -10,6 +10,7 @@ class TCRPowerCalculator:
 		self.pcmodel = pcmodel
 		self.predict_variance = self.pcmodel.predict_variance
 		self.predict_mean = self.pcmodel.predict_mean
+		self.get_prediction_interval = self.pcmodel.get_prediction_interval
 
 	#possivle TODO: Parse this method out into a new 2-step model class
 	def predict_detection_probability_2step(self, tcr_frequencies, num_reads, num_cells):
@@ -34,7 +35,7 @@ class TCRPowerCalculator:
 		#Step 2 Negbin
 		
 		mu_reads = self.pcmodel.predict_mean(num_cells_TCR/num_cells, num_reads)
-		p2 = self.pcmodel.pmf(0, alpha, mu_reads)
+		p2 = self.pcmodel.pmf(mu_reads, count = 0)
 		
 		#alpha = self.pcmodel.alpha
 		#n,p = rp_negbin_params(alpha, mu_reads)
