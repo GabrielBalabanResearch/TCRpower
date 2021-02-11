@@ -10,6 +10,7 @@ class TCRPowerCalculator:
 		self.predict_variance = self.pcmodel.predict_variance
 		self.predict_mean = self.pcmodel.predict_mean
 		self.get_prediction_interval = self.pcmodel.get_prediction_interval
+		self.predict_detection_probability = self.pcmodel.predict_detection_probability
 
 	#possivle TODO: Parse this method out into a new 2-step model class
 	def predict_detection_probability_2step(self, tcr_frequencies, num_reads, num_cells):
