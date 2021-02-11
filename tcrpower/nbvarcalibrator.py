@@ -165,11 +165,10 @@ class NBVarTCRCountModel:
 
 	def predict_variance(self, tcr_frequencies, num_reads):
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		return mu + self.alpha*mu**2
+		return mu + self.alpha*mu**self.lmbda
 
 	def pmf(self, mu, count = 0):
-		alpha = self.alpha
-		r,p = rp_negbin_params(alpha, mu)
+		r,p = NBVarCalibrator.negbin_rp(self.alpha, mu, self.lmbda)
 		return stats.nbinom.pmf(count, r, p)
 
 	def predict_detection_probability(self, tcr_frequencies = 1.0, num_reads = 1):
@@ -183,14 +182,6 @@ class NBVarTCRCountModel:
 		return 1.0 - self.pmf(mu, count = 0)
 
 	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
-		alpha = self.alpha
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		r,p = rp_negbin_params(alpha, mu)
+		r,p = NBVarCalibrator.negbin_rp(self.alpha, mu, self.lmbda)
 		return stats.nbinom.interval(interval_size, r, p)
-
-#class PCModel:
-#	"Power Calculator Model"
-#	def __init__(self, pread, alpha, lmbda):
-#		self.pread = pread
-#		self.alpha = alpha
-#		self.lmbda = lmbda
