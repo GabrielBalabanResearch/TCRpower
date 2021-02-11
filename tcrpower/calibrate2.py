@@ -6,6 +6,7 @@ import warnings
 from scipy.special import gamma, gammaln, digamma, polygamma
 from tcrpower.newtonfitter import NewtonFitter
 from functools import partial
+from scipy.optimize import minimize, minimize_scalar
 
 class PCVarPowerCalibrator(object):
 	"""
@@ -50,70 +51,76 @@ class PCVarPowerCalibrator(object):
 				  stepsize = 1.0,
 				  maxiter = 1000,
 				  TOL = 1.0e-8,
+				  method = "Newton",
 				  show_convergence = False):
 
 		if start_params is None:
-			start_params = self.get_default_initparams()
+			start_params = self.get_default_initparams(show_convergence)
 
+		llhp = lambda p: self.llh(p[0], p[1], p[2])
 		scorep = lambda p: self.score(p[0], p[1], p[2])
 		llh_hess = nd.Jacobian(scorep, 1.0e-8)
 
-		fitter = NewtonFitter(lambda p: self.llh(p[0], p[1], p[2]),
-							  scorep,
-							  llh_hess)
-		
-		fittingresult = fitter.fit(start_params = start_params,
-								   stepsize = stepsize,
-								   TOL = TOL,
-								   maxiter = maxiter,
-								   show_convergence = show_convergence)
-		
-		return PCModel(fittingresult.params[0], 
-					   fittingresult.params[1],
-					   fittingresult.params[2])
+		if method == "Newton":
+			fitter = NewtonFitter(llhp,
+								  scorep,
+								  llh_hess)
+			
+			fittingresult = fitter.fit(start_params = start_params,
+									   stepsize = stepsize,
+									   TOL = TOL,
+									   maxiter = maxiter,
+									   show_convergence = show_convergence)
 
-	def get_default_initparams(self):
+			return PCModel(fittingresult.params[0], 
+						   fittingresult.params[1],
+						   fittingresult.params[2])
+
+		elif method == "SLSQP":
+			opt_res = minimize(llhp,
+							   start_params,
+							   jac = scorep, 
+				               method = "SLSQP",
+				               bounds = [[0, None], [0, None], [0, None]],
+				               options = {"disp":show_convergence})
+
+			return PCModel(opt_res.x[0], 
+						   opt_res.x[1],
+						   opt_res.x[2])
+
+	def get_default_initparams(self, show_convergence):
 		#Get beta parameters from Poisson model
+		X = self.fmix*self.Nread
+
 		with warnings.catch_warnings():
 			warnings.simplefilter("ignore")
 			poisson_fam = sm.families.Poisson(link = sm.genmod.families.links.identity())
-			beta0 = sm.GLM(self.Y, self.X, poisson_fam).fit().params
+			pread0 = sm.GLM(self.C, X, poisson_fam).fit().params
 
-		from IPython import embed; embed()
-		#Set lmbda = 2 and fit alpha0
+		#Set lmbda = 2 and fit pread0, alpha0
 
+		llh_partial = lambda x: -1*self.llh(x[0], x[1], 2.0)
+		score_partial = lambda x : -1*self.score(x[0], x[1], 2.0)[:2]
+		llh_hess_part = nd.Jacobian(score_partial, 1.0e-8)
 
-
-#		#Get alpha, beta from NB2 model
-#		nb2_model = NB2RegressionFitter()
-#		dim_X = self.X.shape[1]
-
-#		xvars = ["X{}".format(i) for i in range(dim_X)]
-#		XY_df= XY_df = pd.DataFrame(np.hstack([self.Y[:, np.newaxis], self.X]), 
-#									columns = ["Y"] + xvars)
-
-#		nb2_fit = nb2_model.fit("Y",
-#								 xvars,
-#					  			 XY_df,
-#					  			 method = "Newton",
-#					  			 maxiter = 50,
-#					  			 TOL = 1.0e-7,
-#				 	 			 show_convergence = False)
-
-#		beta0 = nb2_fit.params_arr[:dim_X]
-#		alpha0 = nb2_fit.params_arr[dim_X]
-
-		#Get lambda by a 1-d optimization
-		llh_lmbda = partial(self.llh, beta0, alpha0)
+		x0 = np.array([float(pread0), 0.001])
+		opt_res = minimize(llh_partial,
+						   x0,
+						   jac = score_partial, 
+			               method = "SLSQP",
+			               bounds = [[0, None], [0, None]],
+			               options = {"disp":show_convergence})
+		pread0, alpha0 = opt_res.x
+		
+		#Get lambda0 by a 1-d optimization
+		llh_lmbda = partial(self.llh, pread0, alpha0)
 		opt_res = minimize_scalar(lambda x: -1*llh_lmbda(x), bracket = [0,2])
 		
 		lmbda0 = opt_res.x
-
-		return np.hstack([beta0, alpha0, lmbda0])
-
+		return np.array([pread0, alpha0, lmbda0])
 
 	def llh(self, pread, alpha, lmbda):
-		mu = self.fmix*pread*self.Nread
+		mu = pread*self.fmix*self.Nread
 		r,p = self.negbin_rp(mu, alpha, lmbda)
 
 		llh = gammaln(self.C + r) - gammaln(r) - gammaln(self.C +1)
@@ -121,7 +128,7 @@ class PCVarPowerCalibrator(object):
 		return np.sum(llh)
 
 	def score(self, pread, alpha, lmbda):
-		mu = self.fmix*pread*self.Nread
+		mu = pread*self.fmix*self.Nread
 
 		alphainv = 1.0/alpha
 		r,p = self.negbin_rp(mu, alpha, lmbda)
@@ -134,15 +141,14 @@ class PCVarPowerCalibrator(object):
 
 		dr_dlmbda = (-1*np.log(mu)*mu**(2 - lmbda))/alpha
 		dp_dlmbda = (-alpha*np.log(mu)*mu**(lmbda -1))/(1 + alpha*mu**(lmbda -1))**2
-
 		A1 = (digamma(self.C + r)- digamma(r) + np.log(p))
 		A2 = (r/p - self.C/(1-p))
 
 		dllh_da = (dr_da*A1 + dp_da*A2).sum()
-		dllh_dbeta = np.dot(self.X.T, dr_dmu*A1 + dp_dmu*A2)
+		dllh_dpread = (self.fmix*self.Nread*(dr_dmu*A1 + dp_dmu*A2)).sum()
 		dllh_dlmbda = (dr_dlmbda*A1 + dp_dlmbda*A2).sum()
 
-		return np.hstack([dllh_dbeta, [dllh_da, dllh_dlmbda]])
+		return np.array([dllh_dpread, dllh_da, dllh_dlmbda])
 
 	@staticmethod
 	def negbin_rp(mu, alpha, lmbda):
@@ -150,3 +156,10 @@ class PCVarPowerCalibrator(object):
 		amul = alpha*mu**(lmbda -1)		
 		p = 1/(1 + amul)
 		return r, p
+
+class PCModel:
+	"Power Calculator Model"
+	def __init__(self, pread, alpha, lmbda):
+		self.pread = pread
+		self.alpha = alpha
+		self.lmbda = lmbda

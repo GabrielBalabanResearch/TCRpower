@@ -28,11 +28,11 @@ def get_testdata(intercept = True,
 						 random_state = RANDSTATE)
 	return C, fmix
 
-def get_default_testparams(Nread = 10000, pread = 0.7, alpha = 0.05):
-	return Nread, pread, alpha
+def get_default_testparams(Nread = 10000, pread = 0.7, alpha = 0.05, lmbda = 2.0):
+	return Nread, pread, alpha, lmbda
 
 def test_parameterization_consistent():
-	Nread, pread, alpha = get_default_testparams()
+	Nread, pread, alpha, lmbda = get_default_testparams()
 
 	C, fmix = get_testdata(Nread = Nread, 
 						   pread = pread,
@@ -47,11 +47,12 @@ def test_parameterization_consistent():
 	print("Parameterization internal consistency test passed")
 
 def test_PCCalibrator_llh():
-	Nread, pread, alpha = get_default_testparams()
+	Nread, pread, alpha, lmbda = get_default_testparams()
 
 	C, fmix = get_testdata(Nread = Nread, 
 						   pread = pread,
-						   alpha = alpha)
+						   alpha = alpha,
+						   lmbda= lmbda)
 
 	mu = Nread*pread*fmix
 
@@ -67,10 +68,11 @@ def test_PCCalibrator_llh():
 def test_PCCalibrator_fdtest_paramderiv(show_results = False):
 	#Tests that the score function matches a numerical derivative
 
-	Nread, pread, alpha = get_default_testparams()
+	Nread, pread, alpha, lmbda = get_default_testparams()
 	C, fmix = get_testdata(Nread = Nread, 
 						   pread = pread,
-						   alpha = alpha)
+						   alpha = alpha,
+						   lmbda = lmbda)
 
 	nb2_calibrator = PCCalibrator(fmix, C, Nread)
 	x_true = np.array([pread, alpha])
@@ -120,10 +122,11 @@ class FDTestResult(object):
 #################################################
 
 def test_PCCalibrator_fit(show_results = False):
-	Nread, pread, alpha = get_default_testparams(Nread = 1000000)
+	Nread, pread, alpha, lmbda = get_default_testparams(Nread = 1000000)
 	C, fmix = get_testdata(alpha = alpha,
 						   Nread = Nread,
 						   pread = pread,
+						   lmbda = lmbda,
 						   TCR_perlog = 50)
 
 	modelcalib = PCCalibrator(fmix, C, Nread)
@@ -134,10 +137,11 @@ def test_PCCalibrator_fit(show_results = False):
 	print("Parameter fitting test passed")
 
 def test_TCRPowerCalculator_limit_of_detection_tcrfreq():
-	Nread, pread, alpha = get_default_testparams(Nread = 1000000)
+	Nread, pread, alpha, lmbda = get_default_testparams(Nread = 1000000)
 	C, fmix = get_testdata(alpha = alpha,
 						   Nread = Nread,
 						   pread = pread,
+						   lmbda = lmbda,
 						   TCR_perlog = 50)
 
 	conf_level = 0.95
@@ -157,10 +161,11 @@ def test_TCRPowerCalculator_limit_of_detection_tcrfreq():
 	print("TCR frequency limit of detection test passed")
 
 def test_TCRPowerCalculator_limit_of_detection_nreads():
-	Nread, pread, alpha = get_default_testparams(Nread = 1000000)
+	Nread, pread, alpha, lmbda = get_default_testparams(Nread = 1000000)
 	C, fmix = get_testdata(alpha = alpha,
 						   Nread = Nread,
 						   pread = pread,
+						   lmbda = lmbda,
 						   TCR_perlog = 50)
 
 	conf_level = 0.95
@@ -180,7 +185,30 @@ def test_TCRPowerCalculator_limit_of_detection_nreads():
 	assert np.abs(p_detect - conf_level) < 0.004
 	print("Num reads limit of detection test passed")
 
+def test_PCVarPowerCalibrator_fit(show_results = False):
+	Nread, pread, alpha, lmbda = get_default_testparams(Nread = 1000000,
+														alpha = 0.25,
+														lmbda = 1.5)
+	C, fmix = get_testdata(alpha = alpha,
+						   Nread = Nread,
+						   pread = pread,
+						   lmbda = lmbda,
+						   TCR_perlog = 50)
+	#print(C)
+	true_params = np.array([pread, alpha, lmbda])
 
+	modelcalib = PCVarPowerCalibrator(fmix, C, Nread)
+	
+	pc_model = modelcalib.fit(show_convergence = show_results,
+		                      stepsize = 1.0,
+		                      method = "Newton")
+
+	if show_results:
+		print("Estimated", np.array([pc_model.pread, pc_model.alpha, pc_model.lmbda]).round(3))
+		print("True", true_params)
+	assert np.abs(pc_model.pread - pread) < 0.2 
+	assert np.abs(pc_model.alpha - alpha) < 0.03
+	print("PCVAR Parameter fitting test passed")
 
 if __name__ == "__main__":
 	test_parameterization_consistent()
@@ -189,3 +217,4 @@ if __name__ == "__main__":
 	test_PCCalibrator_fit(show_results = False)
 	test_TCRPowerCalculator_limit_of_detection_tcrfreq()
 	test_TCRPowerCalculator_limit_of_detection_nreads()
+	test_PCVarPowerCalibrator_fit(show_results = True)
