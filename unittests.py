@@ -185,7 +185,7 @@ def test_TCRPowerCalculator_limit_of_detection_nreads():
 	assert np.abs(p_detect - conf_level) < 0.004
 	print("Num reads limit of detection test passed")
 
-def test_PCVarPowerCalibrator_fit(show_results = False):
+def test_NBVarCalibrator_fit(show_results = False):
 	Nread, pread, alpha, lmbda = get_default_testparams(Nread = 1000000,
 														alpha = 0.25,
 														lmbda = 1.5)
@@ -210,6 +210,58 @@ def test_PCVarPowerCalibrator_fit(show_results = False):
 	assert np.abs(pc_model.alpha - alpha) < 0.03
 	print("PCVAR Parameter fitting test passed")
 
+def test_TCRPowerCalculator_NBvar_limit_of_detection_tcrfreq():
+	Nread, pread, alpha, lmbda = get_default_testparams(Nread = 1000000,
+		                                                alpha = 0.25,
+		                                                lmbda = 1.5)
+	C, fmix = get_testdata(alpha = alpha,
+						   Nread = Nread,
+						   pread = pread,
+						   lmbda = lmbda,
+						   TCR_perlog = 50)
+	conf_level = 0.95
+
+	modelcalib = NBVarCalibrator(fmix, C, Nread)
+	powercalc = TCRPowerCalculator(modelcalib.fit())
+	
+	#The lowest frequency TCR clone that can be detected with 95% reliability
+
+	f_lod95 = powercalc.get_limit_of_detection_tcrfreq(Nread, conf_level)
+	mu_lod95 = f_lod95*pread*Nread 
+
+	r, p = NBVarCalibrator.negbin_rp(mu_lod95, alpha, lmbda)
+
+	p_detect = 1 - stats.nbinom.pmf(0, r, p)
+	assert np.abs(p_detect - conf_level) < 0.004
+	print("NBVar TCR frequency limit of detection test passed")
+
+def test_TCRPowerCalculator_NBVar_limit_of_detection_nreads():
+	Nread, pread, alpha, lmbda = get_default_testparams(Nread = 1000000,
+														alpha = 0.25,
+		                                                lmbda = 1.5)
+	C, fmix = get_testdata(alpha = alpha,
+						   Nread = Nread,
+						   pread = pread,
+						   lmbda = lmbda,
+						   TCR_perlog = 50)
+
+	conf_level = 0.95
+
+	modelcalib = NBVarCalibrator(fmix, C, Nread)
+	powercalc = TCRPowerCalculator(modelcalib.fit())
+	
+	test_tcr_freq = np.median(fmix)
+
+	#The lowest frequency TCR clone that can be detected with 95% reliability
+	nread_lod95 = powercalc.get_limit_of_detection_nreads(test_tcr_freq, conf_level)
+	mu_lod95 = test_tcr_freq*pread*nread_lod95 
+
+	r, p = NBVarCalibrator.negbin_rp(mu_lod95, alpha, lmbda)
+
+	p_detect = 1 - stats.nbinom.pmf(0, r, p)
+	assert np.abs(p_detect - conf_level) < 0.004
+	print("NBVar Num reads limit of detection test passed")
+
 if __name__ == "__main__":
 	test_parameterization_consistent()
 	test_PCCalibrator_llh()
@@ -217,4 +269,6 @@ if __name__ == "__main__":
 	test_PCCalibrator_fit(show_results = False)
 	test_TCRPowerCalculator_limit_of_detection_tcrfreq()
 	test_TCRPowerCalculator_limit_of_detection_nreads()
-	test_PCVarPowerCalibrator_fit(show_results = False)
+	test_NBVarCalibrator_fit(show_results = False)
+	test_TCRPowerCalculator_NBvar_limit_of_detection_tcrfreq()
+	test_TCRPowerCalculator_NBVar_limit_of_detection_nreads()

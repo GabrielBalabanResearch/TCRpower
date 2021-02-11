@@ -4,9 +4,11 @@ import statsmodels.api as sm
 import numdifftools as nd
 import warnings
 from scipy.special import gamma, gammaln, digamma, polygamma
+from scipy import stats
 from tcrpower.newtonfitter import NewtonFitter
 from functools import partial
 from scipy.optimize import minimize, minimize_scalar
+from tcrpower.nb2calibrator import NB2Calibrator
 
 class NBVarCalibrator(object):
 	"""
@@ -85,29 +87,11 @@ class NBVarCalibrator(object):
 		return NBVarTCRCountModel(pread, alpha, lmbda)
 
 	def get_default_initparams(self, show_convergence):
-		#Get beta parameters from Poisson model
-		X = self.fmix*self.Nread
 
-		with warnings.catch_warnings():
-			warnings.simplefilter("ignore")
-			poisson_fam = sm.families.Poisson(link = sm.genmod.families.links.identity())
-			pread0 = sm.GLM(self.C, X, poisson_fam).fit().params
+		modelcalib = NB2Calibrator(self.fmix, self.C, self.Nread)
+		nb2fit = modelcalib.fit()
+		alpha0, pread0 = nb2fit.alpha, nb2fit.pread
 
-		#Set lmbda = 2 and fit pread0, alpha0
-
-		llh_partial = lambda x: -1*self.llh(x[0], x[1], 2.0)
-		score_partial = lambda x : -1*self.score(x[0], x[1], 2.0)[:2]
-		llh_hess_part = nd.Jacobian(score_partial, 1.0e-8)
-
-		x0 = np.array([float(pread0), 0.001])
-		opt_res = minimize(llh_partial,
-						   x0,
-						   jac = score_partial, 
-			               method = "SLSQP",
-			               bounds = [[0, None], [0, None]],
-			               options = {"disp":show_convergence})
-		pread0, alpha0 = opt_res.x
-		
 		#Get lambda0 by a 1-d optimization
 		llh_lmbda = partial(self.llh, pread0, alpha0)
 		opt_res = minimize_scalar(lambda x: -1*llh_lmbda(x), bracket = [0,2])
@@ -168,20 +152,20 @@ class NBVarTCRCountModel:
 		return mu + self.alpha*mu**self.lmbda
 
 	def pmf(self, mu, count = 0):
-		r,p = NBVarCalibrator.negbin_rp(self.alpha, mu, self.lmbda)
+		r,p = NBVarCalibrator.negbin_rp(mu, self.alpha, self.lmbda)
 		return stats.nbinom.pmf(count, r, p)
 
-	def predict_detection_probability(self, tcr_frequencies = 1.0, num_reads = 1):
+	def predict_detection_probability(self, tcr_frequencies = 1.0,
+											num_reads = 1):
 		"""
 		Models detection probability with negative binomial models assuming RNA receptor frequencies
 		detect_thresh = Minimum number of reads before a TCR is considered "detected".
 		"""
-		
 		#TODO: Implement a detection probability threshold by summing over the first argument of the pmf.
 		mu = self.predict_mean(tcr_frequencies, num_reads)
 		return 1.0 - self.pmf(mu, count = 0)
 
 	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		r,p = NBVarCalibrator.negbin_rp(self.alpha, mu, self.lmbda)
+		r,p = NBVarCalibrator.negbin_rp(mu, self.alpha, self.lmbda)
 		return stats.nbinom.interval(interval_size, r, p)

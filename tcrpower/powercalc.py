@@ -48,8 +48,8 @@ class TCRPowerCalculator:
 		opt_f = partial(self.pcmodel.predict_detection_probability, num_reads = num_reads) 
 
 		opt_res = optimize.root_scalar(lambda freq: opt_f(freq) - conf_level,
-										method = "brentq",
-										bracket = [0,1])
+		 								method = "brentq",
+		 								bracket = [1.0e-16, 1])
 		return opt_res.root
 
 	def get_limit_of_detection_nreads(self, tcr_freq, conf_level = 0.95):
@@ -57,7 +57,7 @@ class TCRPowerCalculator:
 
 		opt_res = optimize.root_scalar(lambda nreads: opt_nreads(num_reads = nreads) - conf_level,
 										method = "secant",
-										x0 = 0,
+										x0 = 1.0e-16,
 										x1 = 1)
 		
 		return int(np.around(opt_res.root))
