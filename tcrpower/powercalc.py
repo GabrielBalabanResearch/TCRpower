@@ -3,28 +3,13 @@ import numdifftools as nd
 from tcrpower.calibrate import rp_negbin_params
 from scipy import stats
 from scipy import optimize
+from functools import partial
 
 class TCRPowerCalculator:
 	def __init__(self, pcmodel):
 		self.pcmodel = pcmodel
-
-	def predict_mean(self, tcr_frequencies, num_reads):
-		pread = self.pcmodel.pread
-		return tcr_frequencies*pread*num_reads
-
-	def predict_variance(self, tcr_frequencies, num_reads):
-		alpha = self.pcmodel.alpha
-		mu = self.predict_mean(tcr_frequencies, num_reads)
-		return mu + alpha*mu**2
-
-	def predict_detection_probability(self, tcr_frequencies, num_reads):
-		"""
-		Models detection probability with negative binomial models assuming RNA receptor frequencies
-		"""
-		alpha = self.pcmodel.alpha
-		mu = self.predict_mean(tcr_frequencies, num_reads)
-		r,p = rp_negbin_params(alpha, mu)
-		return 1.0 - stats.nbinom.pmf(0, r, p)
+		self.predict_variance = self.pcmodel.predict_variance
+		self.predict_mean = self.pcmodel.predict_mean
 
 	#possivle TODO: Parse this method out into a new 2-step model class
 	def predict_detection_probability_2step(self, tcr_frequencies, num_reads, num_cells):
@@ -47,31 +32,20 @@ class TCRPowerCalculator:
 		p1 = stats.poisson.pmf(num_cells_TCR, mu_cells)
 
 		#Step 2 Negbin
-		alpha = self.pcmodel.alpha
-
-		mu_reads = self.predict_mean(num_cells_TCR/num_cells, num_reads)
 		
-		n,p = rp_negbin_params(alpha, mu_reads)
-		p2 = stats.nbinom.pmf(0, n, p)
+		mu_reads = self.pcmodel.predict_mean(num_cells_TCR/num_cells, num_reads)
+		p2 = self.pcmodel.pmf(0, alpha, mu_reads)
+		
+		#alpha = self.pcmodel.alpha
+		#n,p = rp_negbin_params(alpha, mu_reads)
+		#p2 = stats.nbinom.pmf(0, n, p)
 
 		p0_2step = (p2*p1).sum(axis = 0)
 
 		return 1.0 - p0_poisson - p0_2step
-
-	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
-		alpha = self.pcmodel.alpha
-		mu = self.predict_mean(tcr_frequencies, num_reads)
-		r,p = rp_negbin_params(alpha, mu)
-		return stats.nbinom.interval(interval_size, r, p)
-
+	
 	def get_limit_of_detection_tcrfreq(self, num_reads, conf_level = 0.95):
-		pread = self.pcmodel.pread
-		alpha = self.pcmodel.alpha
-
-		def opt_f(freq):
-			mu = freq*pread*num_reads
-			r, p = rp_negbin_params(alpha, mu)
-			return 1 - stats.nbinom.pmf(0, r, p)
+		opt_f = partial(self.pcmodel.predict_detection_probability, num_reads = num_reads) 
 
 		opt_res = optimize.root_scalar(lambda freq: opt_f(freq) - conf_level,
 										method = "brentq",
@@ -79,15 +53,9 @@ class TCRPowerCalculator:
 		return opt_res.root
 
 	def get_limit_of_detection_nreads(self, tcr_freq, conf_level = 0.95):
-		pread = self.pcmodel.pread
-		alpha = self.pcmodel.alpha
+		opt_nreads = partial(self.pcmodel.predict_detection_probability, tcr_frequencies = tcr_freq) 
 
-		def opt_nreads(num_reads):
-			mu = tcr_freq*pread*num_reads
-			r, p = rp_negbin_params(alpha, mu)
-			return 1 - stats.nbinom.pmf(0, r, p)
-
-		opt_res = optimize.root_scalar(lambda nreads: opt_nreads(nreads) - conf_level,
+		opt_res = optimize.root_scalar(lambda nreads: opt_nreads(num_reads = nreads) - conf_level,
 										method = "secant",
 										x0 = 0,
 										x1 = 1)

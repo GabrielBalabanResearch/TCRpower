@@ -4,6 +4,7 @@ import statsmodels.api as sm
 import numdifftools as nd
 import warnings
 from scipy.special import gamma, gammaln, digamma, polygamma
+from scipy import stats
 from tcrpower.newtonfitter import NewtonFitter
 
 class PCCalibrator(object):
@@ -65,8 +66,8 @@ class PCCalibrator(object):
 								   maxiter = maxiter,
 								   show_convergence = show_convergence)
 		
-		return PCModel(fittingresult.params[0], 
-					   fittingresult.params[1])
+		return NB2TCRCountModel(fittingresult.params[0], 
+					    		fittingresult.params[1])
 
 	def get_default_initparams(self):
 		#Get the initial spread from a Poisson model
@@ -111,12 +112,6 @@ class PCCalibrator(object):
 	def dllh_dmu(self, alpha, mu):
 		return self.C/mu - (1 + self.C*alpha)/(1 + mu*alpha)
 
-class PCModel:
-	"Power Calculator Model"
-	def __init__(self, pread, alpha):
-		self.pread = pread
-		self.alpha = alpha
-
 #Helper functions to switch between negbin parameterizations (NB2 model)
 def rp_negbin_params(alpha, mu):
 	r = 1.0/alpha
@@ -127,3 +122,37 @@ def alpha_mu_negbin_params(r, p):
 	alpha = 1.0/r
 	mu = (1 - p)*r/p
 	return alpha, mu
+
+class NB2TCRCountModel:
+	"Parameterized Negative Binomial 2 model"
+	def __init__(self, pread, alpha):
+		self.pread = pread
+		self.alpha = alpha
+
+	def predict_mean(self, tcr_frequencies, num_reads):
+		return tcr_frequencies*self.pread*num_reads
+
+	def predict_variance(self, tcr_frequencies, num_reads):
+		mu = self.predict_mean(tcr_frequencies, num_reads)
+		return mu + self.alpha*mu**2
+
+	def pmf(self, tcr_frequencies = 1.0, num_reads = 1, count = 0):
+		alpha = self.alpha
+		mu = self.predict_mean(tcr_frequencies, num_reads)
+		r,p = rp_negbin_params(alpha, mu)
+		return stats.nbinom.pmf(count, r, p)
+
+	def predict_detection_probability(self, tcr_frequencies = 1.0, num_reads = 1):
+		"""
+		Models detection probability with negative binomial models assuming RNA receptor frequencies
+		detect_thresh = Minimum number of reads before a TCR is considered "detected".
+		"""
+		
+		#TODO: Implement a detection probability threshold by summing over the first argument of the pmf.
+		return 1.0 - self.pmf(tcr_frequencies = tcr_frequencies, num_reads = num_reads, count =0)
+
+	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
+		alpha = self.alpha
+		mu = self.predict_mean(tcr_frequencies, num_reads)
+		r,p = rp_negbin_params(alpha, mu)
+		return stats.nbinom.interval(interval_size, r, p)

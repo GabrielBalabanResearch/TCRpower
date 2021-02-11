@@ -217,4 +217,4 @@ if __name__ == "__main__":
 	test_PCCalibrator_fit(show_results = False)
 	test_TCRPowerCalculator_limit_of_detection_tcrfreq()
 	test_TCRPowerCalculator_limit_of_detection_nreads()
-	test_PCVarPowerCalibrator_fit(show_results = True)
+	test_PCVarPowerCalibrator_fit(show_results = False)
