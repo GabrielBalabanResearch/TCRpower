@@ -7,9 +7,9 @@ from scipy.special import gamma, gammaln, digamma, polygamma
 from scipy import stats
 from tcrpower.newtonfitter import NewtonFitter
 
-class PCCalibrator(object):
+class NB2Calibrator(object):
 	"""
-	Power Calculator Calibrator
+	Power Calculator calibration with Negative Binomial 2 model
 
 	Performs calibration calculations for a detection power calculator
 	using pilot/test data with known clonotype mixture frequencies 

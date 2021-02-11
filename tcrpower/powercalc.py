@@ -1,6 +1,5 @@
 import numpy as np 
 import numdifftools as nd
-from tcrpower.calibrate import rp_negbin_params
 from scipy import stats
 from scipy import optimize
 from functools import partial

@@ -1,6 +1,6 @@
 import numpy as np
-from tcrpower.calibrate import *
-from tcrpower.calibrate2 import PCVarPowerCalibrator
+from tcrpower.nb2calibrator import *
+from tcrpower.nbvarcalibrator import NBVarCalibrator
 from tcrpower.powercalc import TCRPowerCalculator
 from scipy import stats
 import numdifftools as nd
@@ -21,7 +21,7 @@ def get_testdata(intercept = True,
 	mu = fmix*pread*Nread
 	
 	#Generate Y From a Negbin2 model
-	r, p = PCVarPowerCalibrator.negbin_rp(mu, alpha, lmbda)
+	r, p = NBVarCalibrator.negbin_rp(mu, alpha, lmbda)
 	C = stats.nbinom.rvs(r,
 						 p,
 						 size = len(fmix),
@@ -56,7 +56,7 @@ def test_PCCalibrator_llh():
 
 	mu = Nread*pread*fmix
 
-	nb2_calibrator = PCCalibrator(fmix, C, Nread)
+	nb2_calibrator = NB2Calibrator(fmix, C, Nread)
 
 	r,p = rp_negbin_params(alpha, mu)
 	logp_scipy = np.log(stats.nbinom.pmf(C, r, p)).sum()
@@ -74,7 +74,7 @@ def test_PCCalibrator_fdtest_paramderiv(show_results = False):
 						   alpha = alpha,
 						   lmbda = lmbda)
 
-	nb2_calibrator = PCCalibrator(fmix, C, Nread)
+	nb2_calibrator = NB2Calibrator(fmix, C, Nread)
 	x_true = np.array([pread, alpha])
 
 	x0 = x_true*0.5
@@ -129,7 +129,7 @@ def test_PCCalibrator_fit(show_results = False):
 						   lmbda = lmbda,
 						   TCR_perlog = 50)
 
-	modelcalib = PCCalibrator(fmix, C, Nread)
+	modelcalib = NB2Calibrator(fmix, C, Nread)
 	
 	pc_model = modelcalib.fit(show_convergence = show_results)
 	assert np.abs(pc_model.pread - pread) < 0.2 
@@ -146,7 +146,7 @@ def test_TCRPowerCalculator_limit_of_detection_tcrfreq():
 
 	conf_level = 0.95
 
-	modelcalib = PCCalibrator(fmix, C, Nread)
+	modelcalib = NB2Calibrator(fmix, C, Nread)
 	powercalc = TCRPowerCalculator(modelcalib.fit())
 	
 	#The lowest frequency TCR clone that can be detected with 95% reliability
@@ -170,7 +170,7 @@ def test_TCRPowerCalculator_limit_of_detection_nreads():
 
 	conf_level = 0.95
 
-	modelcalib = PCCalibrator(fmix, C, Nread)
+	modelcalib = NB2Calibrator(fmix, C, Nread)
 	powercalc = TCRPowerCalculator(modelcalib.fit())
 	
 	test_tcr_freq = np.median(fmix)
@@ -197,7 +197,7 @@ def test_PCVarPowerCalibrator_fit(show_results = False):
 	#print(C)
 	true_params = np.array([pread, alpha, lmbda])
 
-	modelcalib = PCVarPowerCalibrator(fmix, C, Nread)
+	modelcalib = NBVarCalibrator(fmix, C, Nread)
 	
 	pc_model = modelcalib.fit(show_convergence = show_results,
 		                      stepsize = 1.0,

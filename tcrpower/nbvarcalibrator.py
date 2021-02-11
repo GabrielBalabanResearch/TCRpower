@@ -8,7 +8,7 @@ from tcrpower.newtonfitter import NewtonFitter
 from functools import partial
 from scipy.optimize import minimize, minimize_scalar
 
-class PCVarPowerCalibrator(object):
+class NBVarCalibrator(object):
 	"""
 	Power Calculator Calibrator
 
@@ -71,11 +71,8 @@ class PCVarPowerCalibrator(object):
 									   TOL = TOL,
 									   maxiter = maxiter,
 									   show_convergence = show_convergence)
-
-			return PCModel(fittingresult.params[0], 
-						   fittingresult.params[1],
-						   fittingresult.params[2])
-
+			pread, alpha, lmbda =fittingresult.params
+			
 		elif method == "SLSQP":
 			opt_res = minimize(llhp,
 							   start_params,
@@ -83,10 +80,9 @@ class PCVarPowerCalibrator(object):
 				               method = "SLSQP",
 				               bounds = [[0, None], [0, None], [0, None]],
 				               options = {"disp":show_convergence})
+			pread, alpha, lmbda = opt_res.x
 
-			return NBVarTCRCountModel(opt_res.x[0], 
-						   			  opt_res.x[1],
-						   			  opt_res.x[2])
+		return NBVarTCRCountModel(pread, alpha, lmbda)
 
 	def get_default_initparams(self, show_convergence):
 		#Get beta parameters from Poisson model
