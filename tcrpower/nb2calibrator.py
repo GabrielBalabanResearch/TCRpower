@@ -141,7 +141,7 @@ class NB2TCRCountModel:
 		r,p = rp_negbin_params(alpha, mu)
 		return stats.nbinom.pmf(count, r, p)
 
-	def predict_detection_probability(self, tcr_frequencies = 1.0, num_reads = 1):
+	def predict_detection_probability(self, tcr_frequencies = 1.0, num_reads = 1, detect_thresh = 1):
 		"""
 		Models detection probability with negative binomial models assuming RNA receptor frequencies
 		detect_thresh = Minimum number of reads before a TCR is considered "detected".
@@ -149,7 +149,8 @@ class NB2TCRCountModel:
 		
 		#TODO: Implement a detection probability threshold by summing over the first argument of the pmf.
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		return 1.0 - self.pmf(mu, count =0)
+		p_belowthresh = self.pmf(mu, count = np.arange(detect_thresh)).sum()
+		return 1.0 - p_belowthresh
 
 	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
 		alpha = self.alpha
