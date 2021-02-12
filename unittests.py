@@ -177,6 +177,7 @@ def test_TCRPowerCalculator_limit_of_detection_nreads():
 
 	#The lowest frequency TCR clone that can be detected with 95% reliability
 	nread_lod95 = powercalc.get_limit_of_detection_nreads(test_tcr_freq, conf_level)
+	
 	mu_lod95 = test_tcr_freq*pread*nread_lod95 
 
 	r, p = rp_negbin_params(alpha, mu_lod95)

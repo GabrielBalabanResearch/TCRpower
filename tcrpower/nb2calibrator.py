@@ -149,7 +149,7 @@ class NB2TCRCountModel:
 		
 		#TODO: Implement a detection probability threshold by summing over the first argument of the pmf.
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		p_belowthresh = self.pmf(mu, count = np.arange(detect_thresh)).sum()
+		p_belowthresh = self.pmf(mu, count = np.arange(detect_thresh)[:,np.newaxis]).sum(axis =0)
 		return 1.0 - p_belowthresh
 
 	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):

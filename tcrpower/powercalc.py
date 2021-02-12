@@ -13,7 +13,7 @@ class TCRPowerCalculator:
 		self.predict_detection_probability = self.pcmodel.predict_detection_probability
 
 	#possivle TODO: Parse this method out into a new 2-step model class
-	def predict_detection_probability_2step(self, tcr_frequencies, num_reads, num_cells):
+	def predict_detection_probability_2step(self, tcr_frequencies, num_reads, num_cells, detect_thresh = 1):
 		"""
 		2-step detection probability model where 
 		
@@ -33,16 +33,12 @@ class TCRPowerCalculator:
 		p1 = stats.poisson.pmf(num_cells_TCR, mu_cells)
 
 		#Step 2 Negbin
-		
 		mu_reads = self.pcmodel.predict_mean(num_cells_TCR/num_cells, num_reads)
-		p2 = self.pcmodel.pmf(mu_reads, count = 0)
-		
-		#alpha = self.pcmodel.alpha
-		#n,p = rp_negbin_params(alpha, mu_reads)
-		#p2 = stats.nbinom.pmf(0, n, p)
 
-		p0_2step = (p2*p1).sum(axis = 0)
+		p2 = self.pcmodel.pmf(mu_reads, count = np.arange(detect_thresh)).sum(axis = 1)
+		p0_2step = (p2*p1.squeeze()).sum(axis = 0)
 
+		#If 0 cells from Poisson model then automatically get 0 reads
 		return 1.0 - p0_poisson - p0_2step
 	
 	def get_limit_of_detection_tcrfreq(self, num_reads, conf_level = 0.95):
