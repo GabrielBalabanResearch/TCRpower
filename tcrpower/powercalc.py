@@ -13,7 +13,7 @@ class TCRPowerCalculator:
 		self.predict_detection_probability = self.pcmodel.predict_detection_probability
 
 	#possivle TODO: Parse this method out into a new 2-step model class
-	def predict_detection_probability_2step(self, tcr_frequencies, num_reads, num_cells, detect_thresh = 1):
+	def predict_detection_probability_2step(self, tcr_frequency, num_reads, num_cells, detect_thresh = 1):		
 		"""
 		2-step detection probability model where 
 		
@@ -24,19 +24,26 @@ class TCRPowerCalculator:
 		on the number of cells that could be sampled for a given TCR.
 		"""
 
-		mu_cells = tcr_frequencies*num_cells
+		mu_cells = tcr_frequency*num_cells
 		p0_poisson = stats.poisson.pmf(0, mu_cells)
 		
 		num_cells_TCR = np.arange(1, num_cells + 1)[:,np.newaxis]
-
+		
 		#Step 1 Poisson
 		p1 = stats.poisson.pmf(num_cells_TCR, mu_cells)
 
+		#Get rid of 0 probability cell counts
+		num_cells_TCR = num_cells_TCR[p1 >0]
+		p1 = p1[p1 >0]
+
 		#Step 2 Negbin
 		mu_reads = self.pcmodel.predict_mean(num_cells_TCR/num_cells, num_reads)
+				
+		p2 = np.zeros(p1.shape)
+		for i in np.arange(detect_thresh):
+			p2 += self.pcmodel.pmf(mu_reads, count = i)
 
-		p2 = self.pcmodel.pmf(mu_reads, count = np.arange(detect_thresh)).sum(axis = 1)
-		p0_2step = (p2*p1.squeeze()).sum(axis = 0)
+		p0_2step = np.dot(p1.squeeze(), p2.squeeze())
 
 		#If 0 cells from Poisson model then automatically get 0 reads
 		return 1.0 - p0_poisson - p0_2step
