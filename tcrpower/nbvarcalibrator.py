@@ -29,19 +29,19 @@ class NBVarCalibrator(object):
 		P_read : The proportion of reads which map
 				 to the target known clonotypes.
 		
-		alpha : variance scaling parameter
+		eta : variance scaling parameter
 		lambda : variance exponential parameter
 
 	Negative Binomial Parameterization with mean mu 
 	and variance
 	
-		var = mu + alpha*mu^lambda
+		var = mu + eta*mu^lambda
 	
 	The density function for a single data-point is then
 	.. math::
 		f(Y,r,p) = \frac{\gamma(Y + r)}{\gamma(Y + 1) \gamma(r)} (1 -p)^Y p^r
-		f(Y, alpha, mu, lambda) = ...
-		 \frac{\gamma(Y + alpha^-1)}{\gamma(Y + 1) \gamma(alpha^-1)} (\frac{\alpha \mu}{1 + \alpha \mu})^Y (1 + \alpha \mu)^(-alpha^-1)
+		f(Y, eta, mu, lambda) = ...
+		 \frac{\gamma(Y + eta^-1)}{\gamma(Y + 1) \gamma(eta^-1)} (\frac{\eta \mu}{1 + \eta \mu})^Y (1 + \eta \mu)^(-eta^-1)
 	"""
 	
 	def __init__(self, tcr_frequencies, counts, num_reads):
@@ -73,7 +73,7 @@ class NBVarCalibrator(object):
 									   TOL = TOL,
 									   maxiter = maxiter,
 									   show_convergence = show_convergence)
-			pread, alpha, lmbda =fittingresult.params
+			read_eff, eta, lmbda = fittingresult.params
 			
 		elif method == "SLSQP":
 			opt_res = minimize(llhp,
@@ -82,77 +82,77 @@ class NBVarCalibrator(object):
 				               method = "SLSQP",
 				               bounds = [[0, None], [0, None], [0, None]],
 				               options = {"disp":show_convergence})
-			pread, alpha, lmbda = opt_res.x
+			read_eff, eta, lmbda = opt_res.x
 
-		return NBVarTCRCountModel(pread, alpha, lmbda)
+		return NBVarTCRCountModel(read_eff, eta, lmbda)
 
 	def get_default_initparams(self, show_convergence):
 
 		modelcalib = NB2Calibrator(self.fmix, self.C, self.Nread)
 		nb2fit = modelcalib.fit()
-		alpha0, pread0 = nb2fit.alpha, nb2fit.pread
+		eta0, read_eff0 = nb2fit.eta, nb2fit.read_eff
 
 		#Get lambda0 by a 1-d optimization
-		llh_lmbda = partial(self.llh, pread0, alpha0)
+		llh_lmbda = partial(self.llh, read_eff0, eta0)
 		opt_res = minimize_scalar(lambda x: -1*llh_lmbda(x), bracket = [0,2])
 		
 		lmbda0 = opt_res.x
-		return np.array([pread0, alpha0, lmbda0])
+		return np.array([read_eff0, eta0, lmbda0])
 
-	def llh(self, pread, alpha, lmbda):
-		mu = pread*self.fmix*self.Nread
-		r,p = self.negbin_rp(mu, alpha, lmbda)
+	def llh(self, read_eff, eta, lmbda):
+		mu = read_eff*self.fmix*self.Nread
+		r,p = self.negbin_rp(mu, eta, lmbda)
 
 		llh = gammaln(self.C + r) - gammaln(r) - gammaln(self.C +1)
 		llh += self.C*np.log(1 - p) + r*np.log(p)
 		return np.sum(llh)
 
-	def score(self, pread, alpha, lmbda):
-		mu = pread*self.fmix*self.Nread
+	def score(self, read_eff, eta, lmbda):
+		mu = read_eff*self.fmix*self.Nread
 
-		alphainv = 1.0/alpha
-		r,p = self.negbin_rp(mu, alpha, lmbda)
+		etainv = 1.0/eta
+		r,p = self.negbin_rp(mu, eta, lmbda)
 
-		dr_da = -1*mu**(2 - lmbda)*alphainv**2
-		dp_da = -mu**(lmbda -1)/((1 + alpha*mu**(lmbda -1))**2)
+		dr_da = -1*mu**(2 - lmbda)*etainv**2
+		dp_da = -mu**(lmbda -1)/((1 + eta*mu**(lmbda -1))**2)
 
-		dr_dmu = ((2 - lmbda)*mu**(1 - lmbda))/alpha
-		dp_dmu = -1 *(alpha*(lmbda - 1)*mu**(lmbda - 2))/(1 + alpha*mu**(lmbda - 1))**2
+		dr_dmu = ((2 - lmbda)*mu**(1 - lmbda))/eta
+		dp_dmu = -1 *(eta*(lmbda - 1)*mu**(lmbda - 2))/(1 + eta*mu**(lmbda - 1))**2
 
-		dr_dlmbda = (-1*np.log(mu)*mu**(2 - lmbda))/alpha
-		dp_dlmbda = (-alpha*np.log(mu)*mu**(lmbda -1))/(1 + alpha*mu**(lmbda -1))**2
+		dr_dlmbda = (-1*np.log(mu)*mu**(2 - lmbda))/eta
+		dp_dlmbda = (-eta*np.log(mu)*mu**(lmbda -1))/(1 + eta*mu**(lmbda -1))**2
 		A1 = (digamma(self.C + r)- digamma(r) + np.log(p))
 		A2 = (r/p - self.C/(1-p))
 
 		dllh_da = (dr_da*A1 + dp_da*A2).sum()
-		dllh_dpread = (self.fmix*self.Nread*(dr_dmu*A1 + dp_dmu*A2)).sum()
+		dllh_dread_eff = (self.fmix*self.Nread*(dr_dmu*A1 + dp_dmu*A2)).sum()
 		dllh_dlmbda = (dr_dlmbda*A1 + dp_dlmbda*A2).sum()
 
-		return np.array([dllh_dpread, dllh_da, dllh_dlmbda])
+		return np.array([dllh_dread_eff, dllh_da, dllh_dlmbda])
 
 	@staticmethod
-	def negbin_rp(mu, alpha, lmbda):
-		r = mu**(2 - lmbda)/alpha
-		amul = alpha*mu**(lmbda -1)		
+	def negbin_rp(mu, eta, lmbda):
+		r = mu**(2 - lmbda)/eta
+		amul = eta*mu**(lmbda -1)		
 		p = 1/(1 + amul)
 		return r, p
 
 class NBVarTCRCountModel:
-	"Parameterized Negative Binomial 2 model"
-	def __init__(self, pread, alpha, lmbda):
-		self.pread = pread
-		self.alpha = alpha
+	"Parameterized Negative Binomial read count model"
+	def __init__(self, read_eff, eta, lmbda):
+		self.read_eff = read_eff
+		self.eta = eta
 		self.lmbda = lmbda
 
 	def predict_mean(self, tcr_frequencies, num_reads):
-		return tcr_frequencies*self.pread*num_reads
+		return tcr_frequencies*self.read_eff*num_reads
 
 	def predict_variance(self, tcr_frequencies, num_reads):
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		return mu + self.alpha*mu**self.lmbda
+		return mu + self.eta*mu**self.lmbda
 
 	def pmf(self, mu, count = 0):
-		r,p = NBVarCalibrator.negbin_rp(mu, self.alpha, self.lmbda)
+		r,p = NBVarCalibrator.negbin_rp(mu, self.eta, self.lmbda)
 		return stats.nbinom.pmf(count, r, p)
 
 	def predict_detection_probability(self, tcr_frequencies = 1.0,
@@ -169,5 +169,10 @@ class NBVarTCRCountModel:
 
 	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		r,p = NBVarCalibrator.negbin_rp(mu, self.alpha, self.lmbda)
+		r,p = NBVarCalibrator.negbin_rp(mu, self.eta, self.lmbda)
 		return stats.nbinom.interval(interval_size, r, p)
+
+	def to_csv(self, outputpath):
+		modelcoefs = pd.DataFrame([[self.read_eff, self.eta, self.lmbda]], 
+			                       columns = ["read_efficiency", "eta", "lambda"])
+		modelcoefs.to_csv(outputpath, index = False)

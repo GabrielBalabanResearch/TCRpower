@@ -26,17 +26,17 @@ class NB2Calibrator(object):
 		P_read : The proportion of reads which map
 				 to the target known clonotypes.
 		
-		alpha: Variance scaling parameter
+		eta: Variance scaling parameter
 
 	Negative Binomial Parameterization is the NB2 model with mean mu 
 	and variance
 	
-		var = mu + alpha*mu^2
+		var = mu + eta*mu^2
 	
 	The density function for a single data-point is then
 	.. math::
 		f(Y,r,p) = \frac{\gamma(Y + r)}{\gamma(Y + 1) \gamma(r)} (1 -p)^Y p^r
-		f(Y, alpha, mu) = \frac{\gamma(Y + alpha^-1)}{\gamma(Y + 1) \gamma(alpha^-1)} (\frac{\alpha \mu}{1 + \alpha \mu})^Y (1 + \alpha \mu)^(-alpha^-1)
+		f(Y, eta, mu) = \frac{\gamma(Y + eta^-1)}{\gamma(Y + 1) \gamma(eta^-1)} (\frac{\eta \mu}{1 + \eta \mu})^Y (1 + \eta \mu)^(-eta^-1)
 	"""
 	
 	def __init__(self, tcr_frequencies, counts, num_reads):
@@ -70,75 +70,75 @@ class NB2Calibrator(object):
 					    		fittingresult.params[1])
 
 	def get_default_initparams(self):
-		#Get the initial spread from a Poisson model
-		alpha0 = 0.001
+		#Get the initial sread_eff from a Poisson model
+		eta0 = 0.001
 
 		with warnings.catch_warnings():
 			warnings.simplefilter("ignore")
 			poisson_fam = sm.families.Poisson(link = sm.genmod.families.links.identity())
 			fread0 = sm.GLM(self.C, self.fmix*self.Nread, poisson_fam).fit().params
-		return np.hstack([fread0, alpha0])
+		return np.hstack([fread0, eta0])
 
-	def llh(self, pread, alpha):
-		mu = self.fmix*pread*self.Nread
+	def llh(self, read_eff, eta):
+		mu = self.fmix*read_eff*self.Nread
 
-		alphainv = alpha**-1
-		llh = gammaln(self.C + alphainv) - gammaln(alphainv) - gammaln(self.C +1)
-		llh += self.C*np.log(alpha*mu) - (self.C + alphainv)*np.log(1 + alpha*mu)
+		etainv = eta**-1
+		llh = gammaln(self.C + etainv) - gammaln(etainv) - gammaln(self.C +1)
+		llh += self.C*np.log(eta*mu) - (self.C + etainv)*np.log(1 + eta*mu)
 		return np.sum(llh)
 
 	#First derivative functions
-	def score(self, pread, alpha):
-		mu = self.fmix*pread*self.Nread
+	def score(self, read_eff, eta):
+		mu = self.fmix*read_eff*self.Nread
 		
-		#alpha derivative
-		dllh_da = self.score_alpha(alpha, mu)		
+		#eta derivative
+		dllh_da = self.score_eta(eta, mu)		
 
 		#fread derivative
-		dllh_dfread = self.Nread*self.fmix.T @ self.dllh_dmu(alpha, mu)
+		dllh_dfread = self.Nread*self.fmix.T @ self.dllh_dmu(eta, mu)
 
 		score = np.hstack([dllh_dfread, dllh_da.sum()])
 		return score
 
-	def score_alpha(self, alpha, mu):
-		alphainv = 1.0/alpha
-		alphamu = alpha*mu
+	def score_eta(self, eta, mu):
+		etainv = 1.0/eta
+		etamu = eta*mu
 
-		dllh_da = alphainv**2*(digamma(alphainv) - digamma(self.C + alphainv))
-		dllh_da += self.C*alphainv
-		dllh_da += alphainv**2*np.log(1 + alphamu) - mu*(self.C + alphainv)/(1 + alphamu)
+		dllh_da = etainv**2*(digamma(etainv) - digamma(self.C + etainv))
+		dllh_da += self.C*etainv
+		dllh_da += etainv**2*np.log(1 + etamu) - mu*(self.C + etainv)/(1 + etamu)
 		return dllh_da
 
-	def dllh_dmu(self, alpha, mu):
-		return self.C/mu - (1 + self.C*alpha)/(1 + mu*alpha)
+	def dllh_dmu(self, eta, mu):
+		return self.C/mu - (1 + self.C*eta)/(1 + mu*eta)
 
 #Helper functions to switch between negbin parameterizations (NB2 model)
-def rp_negbin_params(alpha, mu):
-	r = 1.0/alpha
-	p = 1/(1 + mu*alpha)
+def rp_negbin_params(eta, mu):
+	r = 1.0/eta
+	p = 1/(1 + mu*eta)
 	return r,p
 
-def alpha_mu_negbin_params(r, p):
-	alpha = 1.0/r
+def eta_mu_negbin_params(r, p):
+	eta = 1.0/r
 	mu = (1 - p)*r/p
-	return alpha, mu
+	return eta, mu
 
 class NB2TCRCountModel:
 	"Parameterized Negative Binomial 2 model"
-	def __init__(self, pread, alpha):
-		self.pread = pread
-		self.alpha = alpha
+	def __init__(self, read_eff, eta):
+		self.read_eff = read_eff
+		self.eta = eta
 
 	def predict_mean(self, tcr_frequencies, num_reads):
-		return tcr_frequencies*self.pread*num_reads
+		return tcr_frequencies*self.read_eff*num_reads
 
 	def predict_variance(self, tcr_frequencies, num_reads):
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		return mu + self.alpha*mu**2
+		return mu + self.eta*mu**2
 
 	def pmf(self, mu, count = 0):
-		alpha = self.alpha
-		r,p = rp_negbin_params(alpha, mu)
+		eta = self.eta
+		r,p = rp_negbin_params(eta, mu)
 		return stats.nbinom.pmf(count, r, p)
 
 	def predict_detection_probability(self, tcr_frequencies = 1.0, num_reads = 1, detect_thresh = 1):
@@ -153,7 +153,7 @@ class NB2TCRCountModel:
 		return 1.0 - p_belowthresh
 
 	def get_prediction_interval(self, tcr_frequencies, num_reads, interval_size = 0.95):
-		alpha = self.alpha
+		eta = self.eta
 		mu = self.predict_mean(tcr_frequencies, num_reads)
-		r,p = rp_negbin_params(alpha, mu)
+		r,p = rp_negbin_params(eta, mu)
 		return stats.nbinom.interval(interval_size, r, p)
