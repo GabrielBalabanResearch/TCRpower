@@ -1,8 +1,8 @@
 import argparse
 import pandas as pd
-from tcrpower import NB2Calibrator, NBVarCalibrator, TCRPowerCalculator
+from tcrpower import NBVarTCRCountModel, NBVarCalibrator, TCRPowerCalculator
 
-def main(args):
+def calibrate_model(args):
 	df = pd.read_csv(args.csvfile)
 	modelcalib = NBVarCalibrator(df[args.fraccol].values, 
 							     df[args.countcol].values,
@@ -12,15 +12,39 @@ def main(args):
 	modelfit.to_csv(args.output)
 	print("Done fitting model. Outputed parameters to '{}'.".format(args.output))
 
+def powercalc(args):
+	model_params = pd.read_csv(args.model_params_file)
+	model = NBVarTCRCountModel(float(model_params["read_efficiency"]),
+							   float(model_params["eta"]),
+							   float(model_params["lambda"]))
+
+	print("Do some detection power calculation.")
+
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser("TCRpower")
-	parser.add_argument("csvfile", help = "path to .csv with spike-in TCR read count data.")
-	parser.add_argument("Tread", type = int, help = "Total number of sequencing reads.")
-	parser.add_argument("-output", default = "readcount_model.csv", help = "output file for calibrated model.")
-	parser.add_argument("-countcol", 
+	
+	subparsers = parser.add_subparsers()
+
+	calib_parser = subparsers.add_parser('calibrate', help = 'Fit a negative binomial count model to TCR data.')
+	calib_parser.add_argument("csvfile", help = "path to .csv with spike-in TCR read count data.")
+	calib_parser.add_argument("Tread", type = int, help = "Total number of sequencing reads.")
+	calib_parser.add_argument("-output", default = "readcount_model.csv", help = "output file for calibrated model.")
+	calib_parser.add_argument("-countcol", 
 						default = "A_chain_count",
 						help = "Title of data column with read counts.")
-	parser.add_argument("-fraccol", 
+	calib_parser.add_argument("-fraccol", 
 						default = "TCR_fraction",
 						help = "Title of data column with ground truth TCR fractions.")
-	main(parser.parse_args())
+	calib_parser.set_defaults(func = calibrate_model)
+
+
+	power_parser = subparsers.add_parser('powercalc', help = 'Calculate detection probabilities.')
+	power_parser.add_argument("-model_params_file",
+							   default = "readcount_model.csv", 
+							   help = "path to .csv file with fitted negative binomial model parameters.")
+
+	power_parser.set_defaults(func = powercalc)
+
+	args = parser.parse_args()
+	args.func(args)
