@@ -27,7 +27,7 @@ You can run your own power calculations be either modifying the notebook or crea
 where you import and use the tcrpower package.
 
 ```python
-from TCR power import *
+from tcrpower import NBVarCalibrator, TCRPowerCalculator
 ```
 
 # Known compatible dependencies
