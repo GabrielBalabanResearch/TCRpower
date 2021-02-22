@@ -6,8 +6,8 @@ binomial model is presented below.
 
 ![Example images](/testdata/readcounts_model.png)
 
-Based on the fitted model, you can calculate the probability of detecting a TCR sequence given that you know the true
-TCR frequency, and the minimum number of reads that you require for a TCR to be considered "detected".
+Based on the fitted model, you can calculate the probability of detecting a T-Cell in a sample given that you know the true
+T-Cell frequency, and the minimum number of reads mapping to a TCR that you require for a T-Cell to be considered "detected".
 
 ![Example images](/testdata/powercalc.png)
 
