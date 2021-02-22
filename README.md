@@ -1,7 +1,7 @@
 # About TCRpower
 TCRpower is a detection power calculator for determining the number of sequencing reads and number of sampled cells required to detect a T-Cell receptor from RNA sequencing.
 
-TCRPower uses a negative binomial model to estimate detection probabilities. This model can be calibrated with your own data which is specifict to your experimental set up. To perform the calibration, you will need to know the ground truth TCR fraction, and sequenced TCR counts for a subset of the TCR in your sequencing library, as well as the total number of reads that were sequenced. An example dataset with a fitted negative binomial model is presented below.
+TCRPower uses a negative binomial model to estimate detection probabilities. This model can be calibrated with your own data which is specific to your experimental set up. To perform the calibration, you will need to know the ground truth TCR fraction, and sequenced TCR counts for a subset of the TCR in your sequencing library, as well as the total number of reads that were sequenced. An example dataset with a fitted negative binomial model is presented below.
 
 ![Example images](/testdata/readcounts_model.png)
 
