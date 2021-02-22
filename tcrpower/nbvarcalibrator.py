@@ -176,3 +176,11 @@ class NBVarTCRCountModel:
 		modelcoefs = pd.DataFrame([[self.read_eff, self.eta, self.lmbda]], 
 			                       columns = ["read_efficiency", "eta", "lambda"])
 		modelcoefs.to_csv(outputpath, index = False)
+
+	def __str__(self):
+		pad = 20
+		re_str = "\n\tRead Efficiency".ljust(pad) + "= {}".format(self.read_eff)
+		eta_str = "\n\tEta".ljust(pad) + "= {}".format(self.eta)
+		lmbda_str = "\n\tLambda".ljust(pad) + "= {}".format(self.lmbda)
+		return "Fitted Negative Binomial Model" + re_str + eta_str + lmbda_str
+
