@@ -39,6 +39,7 @@ from TCR power import *
 * matplotlib 3.1.2
 * statsmodels 0.12.1
 * numdifftools 0.9.39
+* jupyter-notebook 6.1.5
 
 # Citations
 See upcoming paper.
