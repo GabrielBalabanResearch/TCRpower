@@ -5,13 +5,23 @@ TCRPower uses a negative binomial model to estimate detection probabilities. Thi
 
 ![Example images](/testdata/readcounts_model.png)
 
-Based on the fitted model, you can calculate the probability of detecting a T-Cell in a sample given that you know the true
-T-Cell frequency, and the minimum number of reads mapping to a TCR that you require for a T-Cell to be considered "detected".
+Based on the fitted model, you can calculate the probability of detecting a T-Cell in a sample given that you know the true T-Cell frequency, and the minimum number of reads mapping to a TCR that you require for a T-Cell to be considered "detected".
 
 ![Example images](/testdata/powercalc.png)
 
 # How to use the calculator
-Download the github repository, and make sure you have the required dependencies. Then run
+Download the github repository, and make sure you have the dependent packages installed that are listed below. The version numbers are known to be compatible with TCRPower, but other versions may work as well.
+
+* python 3.8.5
+* scipy 1.4.1
+* numpy 1.17.4
+* pandas 1.1.0
+* matplotlib 3.1.2
+* statsmodels 0.12.1
+* numdifftools 0.9.39
+* jupyter-notebook 6.1.5
+
+Once you have the dependencies you can run
 
 `python3 setup.py install`
 
@@ -30,30 +40,8 @@ where you import and use the tcrpower package.
 from tcrpower import NBVarCalibrator, TCRPowerCalculator
 ```
 
-# Known compatible dependencies
-* python 3.8.5
-* scipy 1.4.1
-* numpy 1.17.4
-* pandas 1.1.0
-* matplotlib 3.1.2
-* statsmodels 0.12.1
-* numdifftools 0.9.39
-* jupyter-notebook 6.1.5
-
 # Citations
 See upcoming paper.
-
-<!--
-
-The original crack generation method was developed in 
-
-Costa, Caroline Mendonca, et al. "An efficient finite element approach for modeling fibrotic clefts in the heart." IEEE Transactions on Biomedical Engineering 61.3 (2013): 900-910.
-
-For the extension with topological analysis please cite
-
-Balaban G, et al. "3D Electrophysiological Modeling of InterstitialFibrosis Networks and Their Role in VentricularArrhythmias in Non-ischemic Cardiomyopathy." IEEE Transactions on Biomedical Engineering (upcoming).
-DOI 0.1109/TBME.2020.2976924 
- -->
 
 # Lisence 
 CC-BY 4.0 or later version (https://creativecommons.org/licenses/)
