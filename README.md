@@ -10,16 +10,18 @@ Based on the fitted model, you can calculate the probability of detecting a T-Ce
 ![Example images](/testdata/powercalc.png)
 
 # How to use the calculator
-Download the github repository, and make sure you have the dependent packages installed that are listed below. The version numbers are known to be compatible with TCRPower, but other versions may work as well.
+Download the github repository, and make sure you have the dependent packages installed. 
 
-* python 3.8.5
-* scipy 1.4.1
-* numpy 1.17.4
-* pandas 1.1.0
-* matplotlib 3.1.2
-* statsmodels 0.12.1
-* numdifftools 0.9.39
-* jupyter-notebook 6.1.5
+* python (3.8.5)
+* scipy (1.4.1)
+* numpy (1.17.4)
+* pandas (1.1.0)
+* matplotlib (3.1.2)
+* statsmodels (0.12.1)
+* numdifftools (0.9.39)
+* jupyter-notebook (6.1.5)
+
+The package version numbers in brackets are known to be compatible with TCRPower, but other versions may work as well.
 
 Once you have the dependencies you can run
 
