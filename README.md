@@ -48,4 +48,4 @@ from tcrpower import NBVarCalibrator, TCRPowerCalculator
 If you found TCRPower useful in your research please cite the [TCR paper](https://academic.oup.com/bib/advance-article/doi/10.1093/bib/bbab566/6513728) which was published in the journal Briefings in Bioinformatics.
 
 # Lisence 
-[CC-BY 4.0(https://creativecommons.org/licenses/) or later version.
+[CC-BY 4.0](https://creativecommons.org/licenses/) or later version.
