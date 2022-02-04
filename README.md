@@ -10,7 +10,7 @@ Based on the fitted model, you can calculate the probability of detecting a T-Ce
 ![Example images](/testdata/powercalc.png)
 
 # How to use the calculator
-Download the github repository, and make sure you have the dependent packages installed. 
+Download the github repository, and make sure you have the dependent packages installed.
 
 * python (3.8.5)
 * scipy (1.4.1)
@@ -21,7 +21,9 @@ Download the github repository, and make sure you have the dependent packages in
 * numdifftools (0.9.39)
 * jupyter-notebook (6.1.5)
 
-The package version numbers in brackets are known to be compatible with TCRPower, but other versions may work as well.
+The package version numbers in brackets are known to be compatible with TCRPower, but other versions may work as well. 
+If you would like to keep these packages seperate from the rest of your system you can use a package manager like [Miniconda](https://docs.conda.io/) to
+run TCRPower in a virtual environment.
 
 Once you have the dependencies you can run
 
@@ -43,7 +45,7 @@ from tcrpower import NBVarCalibrator, TCRPowerCalculator
 ```
 
 # Citations
-If you found TCRPower useful in your research please cite the [TCR paper](https://academic.oup.com/bib/advance-article/doi/10.1093/bib/bbab566/6513728) in the journal Briefings in Bioinformatics.
+If you found TCRPower useful in your research please cite the [TCR paper](https://academic.oup.com/bib/advance-article/doi/10.1093/bib/bbab566/6513728) which was published in the journal Briefings in Bioinformatics.
 
 # Lisence 
-[CC-BY 4.0] or later version (https://creativecommons.org/licenses/)
+[CC-BY 4.0(https://creativecommons.org/licenses/) or later version.
