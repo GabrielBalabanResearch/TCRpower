@@ -33,7 +33,7 @@ to install the calculator. Check to see if the calculator is working properly by
 
 `python3 unittests.py`
 
-If all of the tests pass then we recommend that you open the Jupyter notebook and try the example calculations.
+To learn how to use TCRPOwer you can open the Jupyter notebook and try the example calculations.
 
 `example_powercalculations.ipynb`
 
